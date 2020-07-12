@@ -97,21 +97,55 @@ namespace GameServer.Implementations
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
 
-            string requestMessage = ReadMessage(request);
-            if (requestMessage == "END")
-                _listening = false;
+            //Read what the user sent.
+            string responseMessage = ActionRequest(request);
 
             //Send a response to the user.
-            SendAcknowledgeMessage(response);
+            SendResponseMessage(response, responseMessage);
             response.OutputStream.Close();
         }
 
-        private void SendAcknowledgeMessage(HttpListenerResponse response)
+        private string ActionRequest(HttpListenerRequest request)
+        {
+            string requestMessage = ReadMessage(request);
+
+            switch(requestMessage)
+            {
+                case "PlayGame":
+                    return PlayGame();
+
+                case "CreateGame":
+                    return CreateServerCode().ServerId.ToString();
+
+                case "EndServer":
+                    return EndServer();
+
+                default:
+                    return "Please enter a valid command";
+            }
+        }
+
+        private ServerCode CreateServerCode()
+        {
+            return (ServerCode) GenerateServerCode();
+        }
+
+        private string PlayGame()
+        {
+            return "Playing the game... do something";
+        }
+
+        private string EndServer()
+        {
+            _listening = false;
+            return "Server killed!";
+        }
+
+        private void SendResponseMessage(HttpListenerResponse response, string responseMessage)
         {
             try
             {
-                string acknowledgeText = "ACK";
-                byte[] buffer = Encoding.UTF8.GetBytes(acknowledgeText);
+                byte[] buffer = Encoding.UTF8.GetBytes(responseMessage);
                 response.ContentLength64 = buffer.Length;
                 response.StatusCode = 200;
                 Stream outputStream = response.OutputStream;
@@ -120,7 +154,7 @@ namespace GameServer.Implementations
             }
             catch(Exception ex)
             {
-                Console.WriteLine("Error sending acknowledgement!");
+                Console.WriteLine("Error sending response to client!");
                 Console.Error.WriteLine(ex);
             }
         }
@@ -139,6 +173,5 @@ namespace GameServer.Implementations
                 return string.Empty;
             }
         }
-
     }
 }
